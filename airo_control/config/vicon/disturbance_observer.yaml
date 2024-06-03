@@ -1,19 +1,22 @@
-r_pos_x: 0.0000000001
-r_pos_y: 0.0000000001
-r_pos_z: 0.00000001
-r_vel_x: 0.0000000001
-r_vel_y: 0.0000000001
-r_vel_z: 0.0000000001
-r_control_x: 0.0000000001
-r_control_y: 0.0000000001
-r_control_z: 0.0000000001
+# q smaller: trust prediction more
+# r smaller: trust measurement more
 
-q_pos_x: 0.00000001
-q_pos_y: 0.00000001
-q_pos_z: 0.00001
-q_vel_x: 0.00000001
-q_vel_y: 0.00000001
-q_vel_z: 0.01
-q_disturbancez_x: 0.00000001
-q_disturbancez_y: 0.00000001
-q_disturbancez_z: 0.01
+r_pos_x: 2.5e-9
+r_pos_y: 2.5e-9
+r_pos_z: 2.5e-9
+r_vel_x: 2.5e-9
+r_vel_y: 2.5e-9
+r_vel_z: 2.5e-9
+r_control_x: 2.5e-9
+r_control_y: 2.5e-9
+r_control_z: 2.5e-9
+
+q_pos_x: 0.0001
+q_pos_y: 0.0001
+q_pos_z: 0.0001
+q_vel_x: 0.0001
+q_vel_y: 0.0001
+q_vel_z: 0.0001
+q_disturbancez_x: 2.5e-9
+q_disturbancez_y: 2.5e-9
+q_disturbancez_z: 2.5e-9
