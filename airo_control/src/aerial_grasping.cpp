@@ -5,40 +5,19 @@
 #include <mavros_msgs/State.h>
 #include <airo_message/FSMInfo.h>
 #include <airo_message/TakeoffLandTrigger.h>
-#include <airo_message/Reference.h>
-#include <iostream>
-#include <istream>
-#include <sstream>
-#include <fstream>
-#include <string>
+#include <airo_message/ReferenceStamped.h>
 #include "std_msgs/Float32.h"
+#include <fstream>
 
-geometry_msgs::PoseStamped local_pose, object_pose, current_object_pose;
+geometry_msgs::PoseStamped local_pose,object_pose, current_object_pose;
 airo_message::FSMInfo fsm_info;
 int cnt = 0;
-int counter = 0;
 
 enum State{
     TAKEOFF,
     COMMAND,
     LAND
 };
-
-airo_message::Reference target_pose_1;
-airo_message::Reference target_pose_2;
-airo_message::Reference target_pose_3;
-airo_message::Reference target_pose_4;
-airo_message::Reference target_pose_5;
-airo_message::Reference target_pose_6;
-
-
-airo_message::TakeoffLandTrigger takeoff_land_trigger;
-bool target_1_reached = false;
-bool target_2_reached = false;
-bool target_3_reached = false;
-bool target_4_reached = false;
-bool target_5_reached = false;
-
 
 void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
     local_pose.header = msg->header;
@@ -72,70 +51,26 @@ void flightCommandCallback(const std_msgs::Float32::ConstPtr& msg) {
   setDutyCycle(dutyCycle);
 }
 
-void datalogger(int i){
-    if (i == 1){
-    std::ofstream save("/root/airo_control_interface_ws/src/airo_control_interface/airo_sav_control/src/tracking_errors/tracking_hover.csv", std::ios::app);
-    save<<std::setprecision(20)<<ros::Time::now().toSec()<<
-        ","<<local_pose.pose.position.x <<","<< target_pose_1.ref_pose.position.x
-        <<","<<local_pose.pose.position.y <<","<< target_pose_1.ref_pose.position.y
-        <<","<<local_pose.pose.position.z <<","<< target_pose_1.ref_pose.position.z<<std::endl;
-    save.close();
-    }
-    if (i == 2){
-    std::ofstream save("/root/airo_control_interface_ws/src/airo_control_interface/airo_control/src/tracking_errors/tracking_approach.csv", std::ios::app);
-    save<<std::setprecision(20)<<ros::Time::now().toSec()<<
-        ","<<local_pose.pose.position.x <<","<< target_pose_2.ref_pose.position.x
-        <<","<<local_pose.pose.position.y <<","<< target_pose_2.ref_pose.position.y
-        <<","<<local_pose.pose.position.z <<","<< target_pose_2.ref_pose.position.z<<std::endl;
-    save.close();
-    }
-    if (i == 3){
-    std::ofstream save("/root/airo_control_interface_ws/src/airo_control_interface/airo_sav_control/src/tracking_errors/tracking_grasp.csv", std::ios::app);
-    save<<std::setprecision(20)<<ros::Time::now().toSec()<<
-        ","<<local_pose.pose.position.x <<","<< target_pose_3.ref_pose.position.x
-        <<","<<local_pose.pose.position.y <<","<< target_pose_3.ref_pose.position.y
-        <<","<<local_pose.pose.position.z <<","<< target_pose_3.ref_pose.position.z<<std::endl;
-    save.close();
-    }
-    if (i == 4){
-    std::ofstream save("/root/airo_control_interface_ws/src/airo_control_interface/airo_sav_control/src/tracking_errors/tracking_lift.csv", std::ios::app);
-    save<<std::setprecision(20)<<ros::Time::now().toSec()<<
-        ","<<local_pose.pose.position.x <<","<< target_pose_4.ref_pose.position.x
-        <<","<<local_pose.pose.position.y <<","<< target_pose_4.ref_pose.position.y
-        <<","<<local_pose.pose.position.z <<","<< target_pose_4.ref_pose.position.z<<std::endl;
-    save.close();
-    }
-    if (i == 5){
-    std::ofstream save("/root/airo_control_interface_ws/src/airo_control_interface/airo_control/src/tracking_errors/tracking_release.csv", std::ios::app);
-    save<<std::setprecision(20)<<ros::Time::now().toSec()<<
-        ","<<local_pose.pose.position.x <<","<< target_pose_5.ref_pose.position.x
-        <<","<<local_pose.pose.position.y <<","<< target_pose_5.ref_pose.position.y
-        <<","<<local_pose.pose.position.z <<","<< target_pose_5.ref_pose.position.z<<std::endl;
-    save.close();
-    }
-    if (i == 6){
-    std::ofstream save("/root/airo_control_interface_ws/src/airo_control_interface/airo_sav_control/src/tracking_errors/tracking_preland.csv", std::ios::app);
-    save<<std::setprecision(20)<<ros::Time::now().toSec()<<
-        ","<<local_pose.pose.position.x <<","<< target_pose_5.ref_pose.position.x
-        <<","<<local_pose.pose.position.y <<","<< target_pose_5.ref_pose.position.y
-        <<","<<local_pose.pose.position.z <<","<< target_pose_5.ref_pose.position.z<<std::endl;
-    save.close();
-    }
-    if (i == 7){
-    std::ofstream save("/root/airo_control_interface_ws/src/airo_control_interface/airo_sav_control/src/tracking_errors/tracking_land.csv", std::ios::app);
-    save<<std::setprecision(20)<<ros::Time::now().toSec()<<
-        ","<<local_pose.pose.position.x <<","<< target_pose_6.ref_pose.position.x
-        <<","<<local_pose.pose.position.y <<","<< target_pose_6.ref_pose.position.y
-        <<","<<local_pose.pose.position.z <<","<< "0"<<std::endl;
-    save.close();
-    }
-}
-
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
     ros::init(argc, argv, "offb_node");
     ros::NodeHandle nh;
     ros::Rate rate(20.0);
     State state = TAKEOFF;
+
+    airo_message::ReferenceStamped target_pose_1;
+    airo_message::ReferenceStamped target_pose_2;
+    airo_message::ReferenceStamped target_pose_3;
+    airo_message::ReferenceStamped target_pose_4;
+    airo_message::ReferenceStamped target_pose_5;
+    airo_message::ReferenceStamped target_pose_6;
+    airo_message::TakeoffLandTrigger takeoff_land_trigger;
+    bool target_1_reached = false;
+    bool target_2_reached = false;
+    bool target_3_reached = false;
+    bool target_4_reached = false;
+    bool target_5_reached = false;
+    bool target_6_reached = false;
 
     // Subscribe to the MAVROS topic for flight commands
     ros::Subscriber sub = nh.subscribe("pwm_commands", 1, flightCommandCallback);
@@ -163,7 +98,7 @@ int main(int argc, char **argv){
     ros::Subscriber local_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose",100,pose_cb);
     ros::Subscriber object_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/gh034_sav_obj/pose", 10, object_pose_cb);
     ros::Subscriber fsm_info_sub = nh.subscribe<airo_message::FSMInfo>("/airo_control/fsm_info",10,fsm_info_cb);
-    ros::Publisher command_pub = nh.advertise<airo_message::Reference>("/airo_control/setpoint",10);
+    ros::Publisher command_pub = nh.advertise<airo_message::ReferenceStamped>("/airo_control/setpoint",10);
     ros::Publisher takeoff_land_pub = nh.advertise<airo_message::TakeoffLandTrigger>("/airo_control/takeoff_land_trigger",10);
 
     while(ros::ok()){
@@ -173,64 +108,63 @@ int main(int argc, char **argv){
         object_pose.pose.position.z = current_object_pose.pose.position.z;
 
         // Hovering pt
-        target_pose_1.ref_pose.position.x = current_object_pose.pose.position.x-0.06; //badminton: -0.065; ball: -0.08
-        target_pose_1.ref_pose.position.y = current_object_pose.pose.position.y+0.03; //badminton: +0.03; ball: +0.03
-        target_pose_1.ref_pose.position.z = 1; //badminton: 0.8; ball: 0.8
-        target_pose_1.ref_pose.orientation.w = 1.0;
-        target_pose_1.ref_pose.orientation.x = 0.0;
-        target_pose_1.ref_pose.orientation.y = 0.0;
-        target_pose_1.ref_pose.orientation.z = 0.0;
+        target_pose_1.ref.pose.position.x = current_object_pose.pose.position.x-0.0175; //shuttlerock: -0.025; ball: -0.017; dyed water: -0.037
+        target_pose_1.ref.pose.position.y = current_object_pose.pose.position.y-0.012; //shuttlerock: +0.03; ball: +0.012; dyed water: -0.1
+        target_pose_1.ref.pose.position.z = 1; //shuttlerock: 1; ball: 1; dyed water: 1
+        target_pose_1.ref.pose.orientation.w = 1.0;
+        target_pose_1.ref.pose.orientation.x = 0.0;
+        target_pose_1.ref.pose.orientation.y = 0.0;
+        target_pose_1.ref.pose.orientation.z = 0.0;
 
         // Approaching pt
-        target_pose_2.ref_pose.position.x = current_object_pose.pose.position.x-0.06; //badminton: -0.065; ball: -0.08
-        target_pose_2.ref_pose.position.y = current_object_pose.pose.position.y+0.03; //badminton: +0.03; ball: +0.03
-        target_pose_2.ref_pose.position.z = 0.6; //badminton: 0.8; ball: 0.8
-        target_pose_2.ref_pose.orientation.w = 1.0;
-        target_pose_2.ref_pose.orientation.x = 0.0;
-        target_pose_2.ref_pose.orientation.y = 0.0;
-        target_pose_2.ref_pose.orientation.z = 0.0;
+        target_pose_2.ref.pose.position.x = current_object_pose.pose.position.x-0.0175; //shuttlerock: -0.025; ball: -0.017; dyed water: -0.03
+        target_pose_2.ref.pose.position.y = current_object_pose.pose.position.y-0.012; //shuttlerock: +0.03; ball: +0.012; dyed water: +0.00
+        target_pose_2.ref.pose.position.z = 0.6; //shuttlerock: 0.6; ball: 0.6; dyed water: 0.6
+        target_pose_2.ref.pose.orientation.w = 1.0;
+        target_pose_2.ref.pose.orientation.x = 0.0;
+        target_pose_2.ref.pose.orientation.y = 0.0;
+        target_pose_2.ref.pose.orientation.z = 0.0;
 
 
         // Grasping pt
-        target_pose_3.ref_pose.position.x = current_object_pose.pose.position.x-0.06; //badminton: -0.065; ball: -0.08
-        target_pose_3.ref_pose.position.y = current_object_pose.pose.position.y+0.03; //badminton: +0.03; ball: -0.03
-        target_pose_3.ref_pose.position.z = 0.38; //badminton: 0.4; ball: 0.38
-        target_pose_3.ref_pose.orientation.w = 1.0;
-        target_pose_3.ref_pose.orientation.x = 0.0;
-        target_pose_3.ref_pose.orientation.y = 0.0;
-        target_pose_3.ref_pose.orientation.z = 0.0;
+        target_pose_3.ref.pose.position.x = current_object_pose.pose.position.x-0.0175; //shuttlerock: -0.025; ball: -0.017; dyed water: -0.03
+        target_pose_3.ref.pose.position.y = current_object_pose.pose.position.y-0.012; //shuttlerock: +0.03; ball: +0.012; dyed water: +0.00
+        target_pose_3.ref.pose.position.z = 0.28; //shuttlerock: 0.31; ball: 0.28; dyed water: 0.29
+        target_pose_3.ref.pose.orientation.w = 1.0;
+        target_pose_3.ref.pose.orientation.x = 0.0;
+        target_pose_3.ref.pose.orientation.y = 0.0;
+        target_pose_3.ref.pose.orientation.z = 0.0;
 
         // Lifting pt
-        target_pose_4.ref_pose.position.x = -1.5;
-        target_pose_4.ref_pose.position.y = 0;
-        target_pose_4.ref_pose.position.z = 1;
-        target_pose_4.ref_pose.orientation.w = 1.0;
-        target_pose_4.ref_pose.orientation.x = 0.0;
-        target_pose_4.ref_pose.orientation.y = 0.0;
-        target_pose_4.ref_pose.orientation.z = 0.0;
+        target_pose_4.ref.pose.position.x = -2;
+        target_pose_4.ref.pose.position.y = 0;
+        target_pose_4.ref.pose.position.z = 1;
+        target_pose_4.ref.pose.orientation.w = 1.0;
+        target_pose_4.ref.pose.orientation.x = 0.0;
+        target_pose_4.ref.pose.orientation.y = 0.0;
+        target_pose_4.ref.pose.orientation.z = 0.0;
 
         // Releasing pt
-        target_pose_5.ref_pose.position.x = -1.5;
-        target_pose_5.ref_pose.position.y = 1;
-        target_pose_5.ref_pose.position.z = 0.6;
-        target_pose_5.ref_pose.orientation.w = 1.0;
-        target_pose_5.ref_pose.orientation.x = 0.0;
-        target_pose_5.ref_pose.orientation.y = 0.0;
-        target_pose_5.ref_pose.orientation.z = 0.0;
+        target_pose_5.ref.pose.position.x = -1.653;
+        target_pose_5.ref.pose.position.y = -1.03;
+        target_pose_5.ref.pose.position.z = 0.6;
+        target_pose_5.ref.pose.orientation.w = 1.0;
+        target_pose_5.ref.pose.orientation.x = 0.0;
+        target_pose_5.ref.pose.orientation.y = 0.0;
+        target_pose_5.ref.pose.orientation.z = 0.0;
 
         // Pre-landing pt
-        target_pose_6.ref_pose.position.x = 0;
-        target_pose_6.ref_pose.position.y = 1;
-        target_pose_6.ref_pose.position.z = 0.6;
-        target_pose_6.ref_pose.orientation.w = 1.0;
-        target_pose_6.ref_pose.orientation.x = 0.0;
-        target_pose_6.ref_pose.orientation.y = 0.0;
-        target_pose_6.ref_pose.orientation.z = 0.0;
+        target_pose_6.ref.pose.position.x = 0;
+        target_pose_6.ref.pose.position.y = -1.03;
+        target_pose_6.ref.pose.position.z = 0.6;
+        target_pose_6.ref.pose.orientation.w = 1.0;
+        target_pose_6.ref.pose.orientation.x = 0.0;
+        target_pose_6.ref.pose.orientation.y = 0.0;
+        target_pose_6.ref.pose.orientation.z = 0.0;
 
         switch(state){
             case TAKEOFF:{
                 if(fsm_info.is_landed == true){
-                    //Update the duty cycle to 1200000 (Gripper fully opens)
                     setDutyCycle(1200000);
                     while(ros::ok()){
                         takeoff_land_trigger.takeoff_land_trigger = true; // Takeoff
@@ -251,122 +185,114 @@ int main(int argc, char **argv){
                 if(fsm_info.is_waiting_for_command){
                     if(!target_1_reached){
                         target_pose_1.header.stamp = ros::Time::now();
-                        command_pub.publish(target_pose_1);    
-                        datalogger(1);
-                        std::cout<<"------- object pos -------"<<std::endl;
-                        std::cout<<"obj_pose.x: "<< target_pose_1.ref_pose.position.x<<std::endl;
-                        std::cout<<"obj_pose.y: "<< target_pose_1.ref_pose.position.y<<std::endl;
-                        std::cout<<"obj_pose.z: "<< target_pose_1.ref_pose.position.z<<std::endl;
-                        if(abs(local_pose.pose.position.x - target_pose_1.ref_pose.position.x)
-                         + abs(local_pose.pose.position.y - target_pose_1.ref_pose.position.y)
-                         + abs(local_pose.pose.position.z - target_pose_1.ref_pose.position.z) < 0.5){
-                            std::cout<<"--- ---- current tracking error -------"<<std::endl;
-                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_1.ref_pose.position.x << std::endl;
-                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_1.ref_pose.position.y << std::endl;
-                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_1.ref_pose.position.z << std::endl;
-                            //Update the duty cycle to 1200000 (Gripper fully opens)
-                            setDutyCycle(1200000);
-                            std::cout<<"hover over obj"<<std::endl;
+                        command_pub.publish(target_pose_1);
+                        if(abs(local_pose.pose.position.x - target_pose_1.ref.pose.position.x) < 0.08
+                        && abs(local_pose.pose.position.y - target_pose_1.ref.pose.position.y) < 0.08
+                        && abs(local_pose.pose.position.z - target_pose_1.ref.pose.position.z) < 0.1){
+                        std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_1.ref.pose.position.x<<std::endl;
+                        std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_1.ref.pose.position.y<<std::endl;
+                        std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_1.ref.pose.position.z<<std::endl;
+                        std::cout<<"hover over obj"<<std::endl;
+                        std::cout<<"cnt: "<<cnt<<std::endl;
+                            
                             target_1_reached = true;
+                            
                         }
                     }
                     if(target_1_reached){
                         target_pose_2.header.stamp = ros::Time::now();
-                        command_pub.publish(target_pose_2);    
-                        datalogger(2);
-                        std::cout<<"------- object pos -------"<<std::endl;
-                        std::cout<<"obj_pose.x: "<< target_pose_2.ref_pose.position.x<<std::endl;
-                        std::cout<<"obj_pose.y: "<< target_pose_2.ref_pose.position.y<<std::endl;
-                        std::cout<<"obj_pose.z: "<< target_pose_2.ref_pose.position.z<<std::endl;
-                        if(abs(local_pose.pose.position.x - target_pose_2.ref_pose.position.x)
-                         + abs(local_pose.pose.position.y - target_pose_2.ref_pose.position.y)
-                         + abs(local_pose.pose.position.z - target_pose_2.ref_pose.position.z) < 0.5){
-                            std::cout<<"--- ---- current tracking error ------"<<std::endl;
-                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_2.ref_pose.position.x << std::endl;
-                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_2.ref_pose.position.y << std::endl;
-                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_2.ref_pose.position.z << std::endl;
-                            //Update the duty cycle to 1200000 (Gripper fully opens)
-                            setDutyCycle(1200000);
-                            std::cout<<"approaching obj"<<std::endl;
-                            target_2_reached = true;
-                        }   
+                        command_pub.publish(target_pose_2);
+                        if(abs(local_pose.pose.position.x - target_pose_2.ref.pose.position.x) < 0.08
+                        && abs(local_pose.pose.position.y - target_pose_2.ref.pose.position.y) < 0.08
+                        && abs(local_pose.pose.position.z - target_pose_2.ref.pose.position.z) < 0.1){
+                        std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_2.ref.pose.position.x<<std::endl;
+                        std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_2.ref.pose.position.y<<std::endl;
+                        std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_2.ref.pose.position.z<<std::endl;
+                        std::cout<<"approaching obj"<<std::endl;
+                        std::cout<<"cnt: "<<cnt<<std::endl;
+                        target_2_reached = true;
+                        }
                     }
                     if(target_2_reached){
                         target_pose_3.header.stamp = ros::Time::now();
                         command_pub.publish(target_pose_3);    
-                        datalogger(3);
-                        std::cout<<"------- object pos -------"<<std::endl;
-                        std::cout<<"obj_pose.x: "<< target_pose_3.ref_pose.position.x<<std::endl;
-                        std::cout<<"obj_pose.y: "<< target_pose_3.ref_pose.position.y<<std::endl;
-                        std::cout<<"obj_pose.z: "<< target_pose_3.ref_pose.position.z<<std::endl;
-                        if(abs(local_pose.pose.position.x - target_pose_3.ref_pose.position.x)
-                        + abs(local_pose.pose.position.y - target_pose_3.ref_pose.position.y)
-                        + abs(local_pose.pose.position.z - target_pose_3.ref_pose.position.z) < 0.5){
+                        if(abs(local_pose.pose.position.x - target_pose_3.ref.pose.position.x) < 0.08
+                        && abs(local_pose.pose.position.y - target_pose_3.ref.pose.position.y) < 0.08
+                        && abs(local_pose.pose.position.z - target_pose_3.ref.pose.position.z) < 0.08){
                             std::cout<<"reach desired grasping point"<<std::endl;
-                            std::cout<<"--- ---- current tracking error ------"<<std::endl;
-                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_3.ref_pose.position.x << std::endl;
-                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_3.ref_pose.position.y << std::endl;
-                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_3.ref_pose.position.z << std::endl;
+                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_3.ref.pose.position.x << std::endl;
+                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_3.ref.pose.position.y << std::endl;
+                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_3.ref.pose.position.z << std::endl;
+                            
+                            target_3_reached = true;
+                            setDutyCycle(1600000);
+
+                            
+                        }
+                    }
+                    if(target_3_reached){
+                        target_pose_3.header.stamp = ros::Time::now();
+                        command_pub.publish(target_pose_3);
+                        setDutyCycle(1600000);
+                        if(abs(local_pose.pose.position.x - target_pose_3.ref.pose.position.x) 
+                        +  abs(local_pose.pose.position.y - target_pose_3.ref.pose.position.y) 
+                        +  abs(local_pose.pose.position.z - target_pose_3.ref.pose.position.z) < 0.3){
+                            std::cout<<"grasping"<<std::endl;
+                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_3.ref.pose.position.x << std::endl;
+                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_3.ref.pose.position.y << std::endl;
+                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_3.ref.pose.position.z << std::endl;
                             std::cout<<"cnt: "<<cnt<<std::endl;
-                            if (cnt < 200){
-                                //Update the duty cycle to 1600000 (Gripper fully closes)
-                                setDutyCycle(1600000);
+                            if (cnt < 150){
                                 cnt++;
                                 std::cout<<"grasping"<<std::endl;
                             }
                             else{
                                 cnt = 0;
-                                target_3_reached = true;
+                                target_4_reached = true;
                             } 
                         }
                     }
-                    if(target_3_reached){
+                    if(target_4_reached){
                         target_pose_4.header.stamp = ros::Time::now();
                         command_pub.publish(target_pose_4);
-                        //Update the duty cycle to 1600000 (Gripper fully closes)
-                        setDutyCycle(1600000);
-                        datalogger(4);
-                        std::cout<<"--- ---- current xyz -------"<<std::endl;
-                        std::cout<<"local_pose.x: "<< local_pose.pose.position.x<<std::endl;
-                        std::cout<<"local_pose.y: "<< local_pose.pose.position.y<<std::endl;
-                        std::cout<<"local_pose.z: "<< local_pose.pose.position.z<<std::endl;
-                        if(abs(local_pose.pose.position.x - target_pose_4.ref_pose.position.x)
-                        + abs(local_pose.pose.position.y - target_pose_4.ref_pose.position.y)
-                        + abs(local_pose.pose.position.z - target_pose_4.ref_pose.position.z) < 0.5){
+                        if(abs(local_pose.pose.position.x - target_pose_4.ref.pose.position.x)
+                        + abs(local_pose.pose.position.y - target_pose_4.ref.pose.position.y)
+                        + abs(local_pose.pose.position.z - target_pose_4.ref.pose.position.z) < 0.3){
                             std::cout<<"--- ---- current tracking error -------"<<std::endl;
-                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_4.ref_pose.position.x << std::endl;
-                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_4.ref_pose.position.y << std::endl;
-                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_4.ref_pose.position.z << std::endl;
+                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_4.ref.pose.position.x << std::endl;
+                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_4.ref.pose.position.y << std::endl;
+                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_4.ref.pose.position.z << std::endl;
                             std::cout<<"cnt: "<<cnt<<std::endl;
-                            if (cnt < 150){
+                            std::cout<<"holding and lifting object"<<std::endl;
+                            
+                            if (cnt < 1000){
                                 cnt++;
-                                std::cout<<"holding and lifting object"<<std::endl;
                             }
                             else{
-                                cnt = 0;
-                                // state = LAND;
-                                target_4_reached = true;
+                                state = LAND;
                             }
+                            // if (cnt < 90){
+                            //     cnt++;
+                            //     std::cout<<"holding and lifting object"<<std::endl;
+                            // }
+                            // else{
+                            //     cnt = 0;
+                            //     target_5_reached = true;
+                            // }
                         }
                     }
-                    
-                    if (target_4_reached){
+                    if (target_5_reached){
                         target_pose_5.header.stamp = ros::Time::now();
                         command_pub.publish(target_pose_5);
-                        datalogger(5);
-                        std::cout<<"--- ---- current xyz -------"<<std::endl;
-                        std::cout<<"local_pose.x: "<< local_pose.pose.position.x<<std::endl;
-                        std::cout<<"local_pose.y: "<< local_pose.pose.position.y<<std::endl;
-                        std::cout<<"local_pose.z: "<< local_pose.pose.position.z<<std::endl;
-                        if(abs(local_pose.pose.position.x - target_pose_5.ref_pose.position.x)
-                         + abs(local_pose.pose.position.y - target_pose_5.ref_pose.position.y)
-                         + abs(local_pose.pose.position.z - target_pose_5.ref_pose.position.z) < 0.5){
+                        if(abs(local_pose.pose.position.x - target_pose_5.ref.pose.position.x)
+                         + abs(local_pose.pose.position.y - target_pose_5.ref.pose.position.y)
+                         + abs(local_pose.pose.position.z - target_pose_5.ref.pose.position.z) < 0.3){
                             std::cout<<"--- ---- current tracking error -------"<<std::endl;
-                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_5.ref_pose.position.x << std::endl;
-                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_5.ref_pose.position.y << std::endl;
-                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_5.ref_pose.position.z << std::endl;
+                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_5.ref.pose.position.x << std::endl;
+                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_5.ref.pose.position.y << std::endl;
+                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_5.ref.pose.position.z << std::endl;
                             std::cout<<"cnt: "<<cnt<<std::endl;
-                            if (cnt<100){
+                            if (cnt<30){
                                 cnt++;
                                 //Update the duty cycle to 1200000 (Gripper fully opens)
                                 setDutyCycle(1200000);
@@ -374,38 +300,24 @@ int main(int argc, char **argv){
                             }
                             else{
                                 cnt = 0;
-                                target_5_reached = true;
+                                
+                                target_6_reached = true;
                             }
                         }
                     }
-
-                    if(target_5_reached){
-                        target_pose_5.header.stamp = ros::Time::now();
+                    if(target_6_reached){
+                        target_pose_6.header.stamp = ros::Time::now();
                         command_pub.publish(target_pose_6);
-                        datalogger(6);
-                        std::cout<<"--- ---- current xyz -------"<<std::endl;
-                        std::cout<<"local_pose.x: "<< local_pose.pose.position.x<<std::endl;
-                        std::cout<<"local_pose.y: "<< local_pose.pose.position.y<<std::endl;
-                        std::cout<<"local_pose.z: "<< local_pose.pose.position.z<<std::endl;
-                        if(abs(local_pose.pose.position.x - target_pose_6.ref_pose.position.x)
-                         + abs(local_pose.pose.position.y - target_pose_6.ref_pose.position.y)
-                         + abs(local_pose.pose.position.z - target_pose_6.ref_pose.position.z) < 0.5){
+                        setDutyCycle(1200000);
+                        if(abs(local_pose.pose.position.x - target_pose_6.ref.pose.position.x)
+                         + abs(local_pose.pose.position.y - target_pose_6.ref.pose.position.y)
+                         + abs(local_pose.pose.position.z - target_pose_6.ref.pose.position.z) < 0.3){
                             std::cout<<"--- ---- current tracking error -------"<<std::endl;
-                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_6.ref_pose.position.x << std::endl;
-                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_6.ref_pose.position.y << std::endl;
-                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_6.ref_pose.position.z << std::endl;
+                            std::cout<<"x tracking error: "<< local_pose.pose.position.x - target_pose_6.ref.pose.position.x << std::endl;
+                            std::cout<<"y tracking error: "<< local_pose.pose.position.y - target_pose_6.ref.pose.position.y << std::endl;
+                            std::cout<<"z tracking error: "<< local_pose.pose.position.z - target_pose_6.ref.pose.position.z << std::endl;
                             std::cout<<"cnt: "<<cnt<<std::endl;
-                            if (cnt<100){
-                                cnt++;
-                                //Update the duty cycle to 1200000 (Gripper fully opens)
-                                setDutyCycle(1200000);
-                                std::cout<<"pre-landing"<<std::endl;
-
-                            }
-                            else{
-                                cnt = 0;
-                                state = LAND;
-                            }
+                            //state = LAND;
                         }
                     }
                 }
@@ -416,7 +328,6 @@ int main(int argc, char **argv){
                 if(fsm_info.is_waiting_for_command){
                     // Update the duty cycle to 1200000 (Gripper fully opens)
                     setDutyCycle(1200000);
-                    datalogger(7);
                     takeoff_land_trigger.takeoff_land_trigger = false; // Land
                     takeoff_land_trigger.header.stamp = ros::Time::now();
                     takeoff_land_pub.publish(takeoff_land_trigger);
@@ -425,8 +336,10 @@ int main(int argc, char **argv){
                 break;
             }
         }
+
         ros::spinOnce();
         ros::Duration(rate).sleep();
     }
+
     return 0;
 }
